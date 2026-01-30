@@ -86,6 +86,12 @@ For DigitalOcean Kubernetes Service (DOKS):
 helmfile apply -e digitalocean -n ${NAMESPACE}
 ```
 
+For GKE:
+
+```bash
+helmfile apply -e gke -n ${NAMESPACE}
+```
+
  **_NOTE:_** DigitalOcean deployment uses public Qwen/Qwen3-0.6B model (no HuggingFace token required) and is optimized for DOKS GPU nodes with automatic tolerations and node selectors. Gateway API v1 compatibility fixes are automatically included.
 
 To see what gateway options are supported refer to our [gateway provider prereq doc](../prereq/gateway-provider/README.md#supported-providers). Gateway configurations per provider are tracked in the [gateway-configurations directory](../prereq/gateway-provider/common-configurations/).
@@ -127,10 +133,11 @@ By default, this well-lit path uses vLLM as the inference server for AI model se
 In case you want to deploy SGLang as the inference server, use:
 
 ```bash
-helmfile apply -e sglang -n ${NAMESPACE}
+export MODEL_SERVER=sglang
+helmfile apply -n ${NAMESPACE}
 ```
 
-**_NOTE:_** Currently you can use this option only with the default gateway and hardware (i.e., `Istio` gateway and `GPU` hardware).
+**_NOTE:_** Currently you can use this option only with the default hardware (`GPU` hardware).
 
 ### Install HTTPRoute When Using Gateway option
 

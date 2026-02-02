@@ -127,10 +127,10 @@ helmfile apply -e cpu  -n ${NAMESPACE} # targets istio as gateway provider with 
 
 This case expects using 4th Gen Intel Xeon processors (Sapphire Rapids) or later.
 
-### Inference Server Selection
+### Model Server Selection
 
-By default, this well-lit path uses vLLM as the inference server for AI model serving.
-In case you want to deploy SGLang as the inference server, use:
+By default, this well-lit path uses vLLM as the model server.
+In case you want to set MODEL_SERVER environment variable to sglang as the model server, use:
 
 ```bash
 export MODEL_SERVER=sglang

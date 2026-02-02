@@ -32,7 +32,7 @@ decode:
       - "--host"
       - "0.0.0.0"
       - "--port"
-      - "8200"
+      - "8000"
       - "--enable-metrics"
       - "--log-level"
       - "debug"
@@ -44,7 +44,7 @@ decode:
       - name: TRITON_CACHE_DIR
         value: /.cache
     ports:
-      - containerPort: 8200
+      - containerPort: 8000
         name: metrics
         protocol: TCP
     resources:
@@ -61,7 +61,7 @@ decode:
     startupProbe:
       httpGet:
         path: /v1/models
-        port: 8200
+        port: 8000
       initialDelaySeconds: 15
       periodSeconds: 30
       timeoutSeconds: 5
@@ -69,14 +69,14 @@ decode:
     livenessProbe:
       httpGet:
         path: /health
-        port: 8200
+        port: 8000
       periodSeconds: 10
       timeoutSeconds: 5
       failureThreshold: 3
     readinessProbe:
       httpGet:
         path: /v1/models
-        port: 8200
+        port: 8000
       periodSeconds: 5
       timeoutSeconds: 2
       failureThreshold: 3

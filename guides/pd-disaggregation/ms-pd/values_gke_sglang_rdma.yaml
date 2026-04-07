@@ -1,0 +1,236 @@
+multinode: false
+
+modelArtifacts:
+  uri: "hf://Qwen/Qwen3-14B"
+  size: 50Gi
+  authSecretName: "llm-d-hf-token"
+  name: "Qwen/Qwen3-14B"
+  labels:
+    llm-d.ai/inference-serving: "true"
+    llm-d.ai/guide: "pd-disaggregation"
+    llm-d.ai/accelerator-variant: "gpu"
+    llm-d.ai/accelerator-vendor: "nvidia"
+    llm-d.ai/model: "Qwen3-14B"
+
+routing:
+  servicePort: 8000
+  proxy:
+    image: ghcr.io/llm-d/llm-d-routing-sidecar:v0.7.1
+    connector: sglang
+    secure: false
+
+decode:
+  create: true
+  priorityClassName: nightly-gpu-critical
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+      portName: "sglang"
+      path: "/metrics"
+      interval: "30s"
+  podAnnotations:
+    networking.gke.io/default-interface: eth0
+    networking.gke.io/interfaces: |
+      [
+        {"interfaceName":"eth0","network":"default"},
+        {"interfaceName":"eth2","network":"rdma-0"},
+        {"interfaceName":"eth3","network":"rdma-1"},
+        {"interfaceName":"eth4","network":"rdma-2"},
+        {"interfaceName":"eth5","network":"rdma-3"},
+        {"interfaceName":"eth6","network":"rdma-4"},
+        {"interfaceName":"eth7","network":"rdma-5"},
+        {"interfaceName":"eth8","network":"rdma-6"},
+        {"interfaceName":"eth9","network":"rdma-7"}
+      ]
+  parallelism:
+    tensor: 8
+  containers:
+  - name: "sglang"
+    image: docker.io/lmsysorg/sglang:v0.5.6.post2
+    modelCommand: custom
+    command:
+      - /bin/bash
+      - -c
+    args:
+      - |
+        source /usr/local/gib/scripts/set_nccl_env.sh
+        export LD_LIBRARY_PATH=$(find / -name libcuda.so.1 -printf '%h\n' 2>/dev/null | sed ':a; N; $!ba; s/\n/:/g'):${LD_LIBRARY_PATH}
+        export LIBRARY_PATH=$(find / -name libcuda.so.1 -printf '%h\n' 2>/dev/null | head -1):${LIBRARY_PATH}
+        python3 -m sglang.launch_server \
+          --model-path Qwen/Qwen3-14B \
+          --port 8200 \
+          --host 0.0.0.0 \
+          --disaggregation-mode decode \
+          --dist-init-addr ${DECODE_IP?}:5000 \
+          --disaggregation-transfer-backend nixl \
+          --tp-size 8 \
+          --log-level debug \
+          --enable-metrics \
+          --disable-custom-all-reduce \
+          --context-length 32000
+    env:
+      - name: DECODE_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+      - name: CUDA_LAUNCH_BLOCKING
+        value: "1"
+      - name: TORCH_USE_CUDA_DSA
+        value: "1"
+      - name: TRITON_PTXAS_DEBUG
+        value: "1"
+      - name: TORCH_COMPILE_DEBUG
+        value: "1"
+      - name: NCCL_DEBUG
+        value: "INFO"
+    ports:
+      - containerPort: 8200
+        name: sglang
+        protocol: TCP
+    resources:
+      limits:
+        cpu: "128"
+        memory: 1Ti
+        nvidia.com/gpu: "8"
+      requests:
+        cpu: "128"
+        memory: 1Ti
+        nvidia.com/gpu: "8"
+    mountModelVolume: true
+    volumeMounts:
+      - mountPath: /usr/local/nvidia
+        name: library-dir-host
+      - mountPath: /usr/local/gib
+        name: gib
+      - name: metrics-volume
+        mountPath: /.config
+      - name: shm
+        mountPath: /dev/shm
+      - name: torch-compile-cache
+        mountPath: /.cache
+  volumes:
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 250Gi
+    - hostPath:
+        path: /home/kubernetes/bin/nvidia
+        type: ""
+      name: library-dir-host
+    - hostPath:
+        path: /home/kubernetes/bin/gib
+        type: ""
+      name: gib
+    - name: metrics-volume
+      emptyDir: {}
+    - name: torch-compile-cache
+      emptyDir: {}
+
+prefill:
+  create: true
+  priorityClassName: nightly-gpu-critical
+  replicas: 1
+  monitoring:
+    podmonitor:
+      enabled: false
+      portName: "sglang"
+      path: "/metrics"
+      interval: "30s"
+  podAnnotations:
+    networking.gke.io/default-interface: eth0
+    networking.gke.io/interfaces: |
+      [
+        {"interfaceName":"eth0","network":"default"},
+        {"interfaceName":"eth2","network":"rdma-0"},
+        {"interfaceName":"eth3","network":"rdma-1"},
+        {"interfaceName":"eth4","network":"rdma-2"},
+        {"interfaceName":"eth5","network":"rdma-3"},
+        {"interfaceName":"eth6","network":"rdma-4"},
+        {"interfaceName":"eth7","network":"rdma-5"},
+        {"interfaceName":"eth8","network":"rdma-6"},
+        {"interfaceName":"eth9","network":"rdma-7"}
+      ]
+  parallelism:
+    tensor: 8
+  containers:
+  - name: "sglang"
+    image: docker.io/lmsysorg/sglang:v0.5.6.post2
+    modelCommand: custom
+    command:
+      - /bin/bash
+      - -c
+    args:
+      - |
+        source /usr/local/gib/scripts/set_nccl_env.sh
+        export LD_LIBRARY_PATH=$(find / -name libcuda.so.1 -printf '%h\n' 2>/dev/null | sed ':a; N; $!ba; s/\n/:/g'):${LD_LIBRARY_PATH}
+        export LIBRARY_PATH=$(find / -name libcuda.so.1 -printf '%h\n' 2>/dev/null | head -1):${LIBRARY_PATH}
+        python3 -m sglang.launch_server \
+          --model-path Qwen/Qwen3-14B \
+          --port 8000 \
+          --host 0.0.0.0 \
+          --disaggregation-mode prefill \
+          --dist-init-addr ${PREFILL_IP?}:5000 \
+          --disaggregation-transfer-backend nixl \
+          --tp-size 8 \
+          --log-level debug \
+          --enable-metrics \
+          --disable-custom-all-reduce \
+          --context-length 32000
+    env:
+      - name: PREFILL_IP
+        valueFrom:
+          fieldRef:
+            fieldPath: status.podIP
+      - name: CUDA_LAUNCH_BLOCKING
+        value: "1"
+      - name: TORCH_USE_CUDA_DSA
+        value: "1"
+      - name: TRITON_PTXAS_DEBUG
+        value: "1"
+      - name: TORCH_COMPILE_DEBUG
+        value: "1"
+      - name: NCCL_DEBUG
+        value: "INFO"
+    ports:
+      - containerPort: 8000
+        name: sglang
+        protocol: TCP
+    resources:
+      limits:
+        cpu: "128"
+        memory: 1Ti
+        nvidia.com/gpu: "8"
+      requests:
+        cpu: "128"
+        memory: 1Ti
+        nvidia.com/gpu: "8"
+    mountModelVolume: true
+    volumeMounts:
+      - mountPath: /usr/local/nvidia
+        name: library-dir-host
+      - mountPath: /usr/local/gib
+        name: gib
+      - name: metrics-volume
+        mountPath: /.config
+      - name: shm
+        mountPath: /dev/shm
+      - name: torch-compile-cache
+        mountPath: /.cache
+  volumes:
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 250Gi
+    - hostPath:
+        path: /home/kubernetes/bin/nvidia
+        type: ""
+      name: library-dir-host
+    - hostPath:
+        path: /home/kubernetes/bin/gib
+        type: ""
+      name: gib
+    - name: metrics-volume
+      emptyDir: {}
+    - name: torch-compile-cache
+      emptyDir: {}

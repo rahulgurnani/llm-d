@@ -115,7 +115,11 @@ releases:
     {{- else if eq .Environment.Name "gke_tpu" }}
       - ms-pd/values_tpu.yaml
     {{- else if eq .Environment.Name "gke_pd_rdma" }}
+      {{- if eq (env "INFERENCE_SERVER") "sglang" }}
+      - ms-pd/values_gke_sglang_rdma.yaml
+      {{- else }}
       - ms-pd/values_gke_rdma.yaml
+      {{- end }}
     {{- else if eq (env "INFERENCE_SERVER") "sglang" }}
       - ms-pd/values_sglang.yaml
     {{- else }}

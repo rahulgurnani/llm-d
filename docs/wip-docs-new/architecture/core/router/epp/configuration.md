@@ -110,6 +110,7 @@ spec:
           kind: EndpointPickerConfig
           plugins:
           - type: prefix-cache-scorer
+          - type: approx-prefix-cache-producer
             parameters:
               blockSizeTokens: 5
               maxPrefixBlocksToMatch: 256
@@ -197,6 +198,7 @@ plugins:
 - name: latency-admitter
   type: latency-slo-admitter
   parameters: ...
+# Add the predicted latency data producer which does the computation of predicted latency. The predicted latency is consumed by the latency-slo-admitter.
 - name: latency-producer
   type: predicted-latency-producer
   parameters: ...
@@ -367,6 +369,8 @@ For a popular plugin like `prefix-cache-scorer`, you configure it in the top-lev
 ```yaml
 plugins:
 - type: prefix-cache-scorer
+# Also add the approx-prefix-cache-producer (data producer) when passing parameters to the prefix cache scorer.
+- type: approx-prefix-cache-producer
   parameters:
     blockSizeTokens: 64 # Default
     maxPrefixBlocksToMatch: 256 # Default

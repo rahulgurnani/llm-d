@@ -157,6 +157,13 @@ featureGates:
 
 - `flowControl`: Enables the Admission and Flow Control layer. This must be enabled to use the `flowControl` configuration section.
 
+#### Removing a Feature Gate
+
+To ensure backward compatibility, a feature gate should usually be removed over two releases:
+
+1.  **First Release:** Graduate the feature functionally but keep the feature gate in the configuration. This ensures that existing configurations remain valid and provides a mechanism for rollback if needed. During this phase, inform users (e.g., via release notes) that the feature gate is deprecated and will be removed in the next release.
+2.  **Second Release:** Completely remove the feature gate from the configuration and code.
+
 ### Request Handling
 
 This section covers components that process requests and responses before they reach the scheduling phase, or after a backend has been selected.

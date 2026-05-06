@@ -161,7 +161,7 @@ featureGates:
 
 To ensure backward compatibility, a feature gate should usually be removed over two releases:
 
-1.  **First Release:** Graduate the feature functionally but keep the feature gate in the configuration. This ensures that existing configurations remain valid and provides a mechanism for rollback if needed. During this phase, inform users (e.g., via release notes) that the feature gate is deprecated and will be removed in the next release.
+1.  **First Release:** Mark the feature as stable and enable it by default, but keep the feature gate in the configuration as a deprecated, still-functional gate so existing configurations remain valid and operators retain a temporary rollback mechanism by disabling the feature if needed. During this phase, inform users (e.g., via release notes) that the feature gate is deprecated and will be removed in the next release.
 2.  **Second Release:** Completely remove the feature gate from the configuration and code.
 
 ### Request Handling

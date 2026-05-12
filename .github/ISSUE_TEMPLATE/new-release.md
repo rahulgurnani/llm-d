@@ -73,6 +73,19 @@ This document defines the process for releasing llm-d.
     git push ${REMOTE} release-${MAJOR}.${MINOR}
     ```
 
+### Create documentation release branch
+
+1. Create a release branch in the llm-d.github.io repository:
+
+   ```shell
+   gh workflow run create-release-branch.yml \
+     --repo llm-d/llm-d.github.io \
+     --field version=${MAJOR}.${MINOR}.${PATCH} \
+     --field source_branch=release-${MAJOR}.${MINOR}
+   ```
+
+1. This creates a `release-${MAJOR}.${MINOR}.${PATCH}` branch that syncs docs nightly from the llm-d release branch.
+
 ### Tag commit and trigger image build
 
 1. Tag the head of your release branch with the sem-ver release version.

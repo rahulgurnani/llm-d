@@ -1,0 +1,34 @@
+spec:
+  template:
+    spec:
+      containers:
+      - name: rdma-device-plugin
+        image: gcr.io/gke-release/rdma-device-plugin:v1.1.0
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-0"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-1"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-2"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-3"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-4"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-5"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-6"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-7"
+        operator: "Exists"
+        effect: "NoSchedule"

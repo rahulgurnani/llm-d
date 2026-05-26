@@ -1,0 +1,18 @@
+# Apply these prerequisites once per cluster before deploying any pd-disaggregation guide:
+#   kubectl apply -k guides/pd-disaggregation/prereq/gke
+#
+# Note: rdma-networks must be rendered from the template before applying:
+#   gomplate -f ../../rdma-networks.yaml.tpl > ../../rdma-networks.yaml
+#   Then add rdma-networks.yaml to the resources list below.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../priority-class.yaml
+  - ../../gke-gateway.yaml
+  - ../../rdma-ds.yaml
+
+patches:
+  - path: ../../rdma-patch.yaml
+    target:
+      kind: DaemonSet
+      name: rdma-device-plugin

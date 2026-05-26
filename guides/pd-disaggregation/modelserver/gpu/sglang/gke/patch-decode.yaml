@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decode
+spec:
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        networking.gke.io/default-interface: eth0
+        networking.gke.io/interfaces: |
+          [
+            {"interfaceName":"eth0","network":"default"},
+            {"interfaceName":"eth1","network":"rdma-0"},
+            {"interfaceName":"eth2","network":"rdma-1"},
+            {"interfaceName":"eth3","network":"rdma-2"},
+            {"interfaceName":"eth4","network":"rdma-3"},
+            {"interfaceName":"eth5","network":"rdma-4"},
+            {"interfaceName":"eth6","network":"rdma-5"},
+            {"interfaceName":"eth7","network":"rdma-6"},
+            {"interfaceName":"eth8","network":"rdma-7"}
+          ]
+    spec:
+      priorityClassName: nightly-gpu-critical
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-0"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-1"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-2"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-3"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-4"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-5"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-6"
+        operator: "Exists"
+        effect: "NoSchedule"
+      - key: "networking.gke.io.networks/rdma-7"
+        operator: "Exists"
+        effect: "NoSchedule"
+      containers:
+        - name: modelserver
+          securityContext:
+            privileged: true
+          command:
+            - /bin/bash
+            - -c
+          args:
+            - |
+              set -euo pipefail
+              [ -f /usr/local/gib/scripts/set_nccl_env.sh ] && source /usr/local/gib/scripts/set_nccl_env.sh || echo "WARNING: gib script not found, NCCL env not configured"
+              export LD_LIBRARY_PATH=$(find / -name libcuda.so.1 -printf '%h\n' 2>/dev/null | sed ':a; N; $!ba; s/\n/:/g'):${LD_LIBRARY_PATH}
+              export LIBRARY_PATH=$(find / -name libcuda.so.1 -printf '%h\n' 2>/dev/null | head -1):${LIBRARY_PATH}
+              python3 -m sglang.launch_server \
+                --model-path Qwen/Qwen3-14B \
+                --port 8200 \
+                --host 0.0.0.0 \
+                --disaggregation-mode decode \
+                --dist-init-addr ${DECODE_IP?}:5000 \
+                --disaggregation-transfer-backend nixl \
+                --tp-size 8 \
+                --log-level debug \
+                --enable-metrics \
+                --disable-custom-all-reduce \
+                --context-length 32000
+          env:
+            - name: DECODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          resources:
+            limits:
+              cpu: "128"
+              memory: 1Ti
+              nvidia.com/gpu: "8"
+            requests:
+              cpu: "128"
+              memory: 1Ti
+              nvidia.com/gpu: "8"
+          volumeMounts:
+            - mountPath: /usr/local/nvidia
+              name: library-dir-host
+            - mountPath: /usr/local/gib
+              name: gib
+            - name: metrics-volume
+              mountPath: /.config
+            - name: shm
+              mountPath: /dev/shm
+            - name: torch-compile-cache
+              mountPath: /.cache
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 250Gi
+        - hostPath:
+            path: /home/kubernetes/bin/nvidia
+          name: library-dir-host
+        - hostPath:
+            path: /home/kubernetes/bin/gib
+          name: gib
+        - name: torch-compile-cache
+          emptyDir: {}

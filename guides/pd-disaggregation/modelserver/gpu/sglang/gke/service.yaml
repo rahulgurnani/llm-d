@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pd-disaggregation-nvidia-gpu-sglang-prefill
+spec:
+  publishNotReadyAddresses: true
+  selector:
+    llm-d.ai/role: prefill
+    llm-d.ai/guide: pd-disaggregation
+  ports:
+  - name: modelserver
+    port: 8000
+    targetPort: 8000
+  - name: dist
+    port: 5000
+    targetPort: 5000
+  - name: nixl
+    port: 5600
+    targetPort: 5600

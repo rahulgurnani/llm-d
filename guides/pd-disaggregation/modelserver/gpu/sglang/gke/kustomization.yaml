@@ -2,5 +2,18 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../base
+  - service.yaml
+  - service-decode.yaml
+
 components:
-  - ../../../../../recipes/modelserver/components/disable-gke-nccl-tuner-patch
+#  - ../../../../../recipes/modelserver/components/disable-gke-nccl-tuner-patch
+
+labels:
+  - pairs:
+      llm-d.ai/model: Qwen3-14B
+    includeSelectors: true
+    includeTemplates: true
+
+patches:
+  - path: patch-decode.yaml
+  - path: patch-prefill.yaml

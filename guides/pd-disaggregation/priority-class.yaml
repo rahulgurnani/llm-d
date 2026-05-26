@@ -1,0 +1,7 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: nightly-gpu-critical
+value: 1000000
+globalDefault: false
+description: "Priority class for nightly GPU workloads to ensure they are scheduled correctly."

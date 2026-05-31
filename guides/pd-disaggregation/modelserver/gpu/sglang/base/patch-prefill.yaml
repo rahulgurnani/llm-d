@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: prefill
 spec:
-  replicas: 8
+  replicas: 6
   template:
     spec:
       containers:
@@ -15,19 +15,19 @@ spec:
             - "--host=0.0.0.0"
             - "--disaggregation-mode=prefill"
             - "--disaggregation-transfer-backend=nixl"
-            - "--tensor-parallel-size=1"
+            - "--tensor-parallel-size=8"
             - "--log-level=info"
             - "--enable-metrics"
             - "--uvicorn-access-log-exclude-prefixes=/metrics"
           resources:
             limits:
-              cpu: "8"
-              memory: 16Gi
-              nvidia.com/gpu: "1"
+              cpu: "32"
+              memory: 128Gi
+              nvidia.com/gpu: "8"
             requests:
-              cpu: "8"
-              memory: 16Gi
-              nvidia.com/gpu: "1"
+              cpu: "32"
+              memory: 128Gi
+              nvidia.com/gpu: "8"
           volumeMounts:
             - mountPath: /dev/shm
               name: shm

@@ -39,8 +39,8 @@ This guide includes configuration for the following accelerators:
 | Backend             | Directory                  | Notes                                                    |
 | ------------------- | -------------------------- | -------------------------------------------------------- |
 | NVIDIA GPU (vLLM)   | `modelserver/gpu/vllm/`    | vLLM, tested nightly                                     |
-| NVIDIA GPU (SGLang) | `modelserver/gpu/sglang/`  | SGLang, validated each release                           |
-| Google TPU          | `modelserver/tpu/vllm/`    | GKE TPU, validated each release                          |
+| NVIDIA GPU (SGLang) | `modelserver/gpu/sglang/`  | SGLang, validated each release (see [GKE guide](./README.gke.md)) |
+| Google TPU          | `modelserver/tpu/vllm/`    | GKE TPU, validated each release (see [TPU guide](./README.tpu.md)) |
 | AMD GPU             | `modelserver/amd/vllm/`    | AMD GPU, community contributed                           |
 | Intel XPU           | `modelserver/xpu/vllm/`    | Intel Data Center GPU Max 1550+, community contributed   |
 | Intel Gaudi (HPU)   | `modelserver/hpu/vllm/`    | Gaudi 1/2/3 with DRA support, community contributed      |

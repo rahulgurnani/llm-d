@@ -9,7 +9,7 @@ on:
       - guides/recipes/**
       - guides/optimized-baseline/**
       - guides/pd-disaggregation/**
-      - guides/precise-prefix-cache-aware/**
+      - guides/precise-prefix-cache-routing/**
       - guides/workload-autoscaling/**
       - guides/prereq/**
       - helpers/client-setup/**
@@ -25,7 +25,7 @@ jobs:
     outputs:
       optimized-baseline: ${{ steps.filter.outputs.optimized-baseline }}
       pd-disaggregation: ${{ steps.filter.outputs.pd-disaggregation }}
-      precise-prefix-cache-aware: ${{ steps.filter.outputs.precise-prefix-cache-aware }}
+      precise-prefix-cache-routing: ${{ steps.filter.outputs.precise-prefix-cache-routing }}
       workload-autoscaling: ${{ steps.filter.outputs.workload-autoscaling }}
     steps:
       - uses: actions/checkout@v6
@@ -36,39 +36,33 @@ jobs:
             optimized-baseline:
               - .github/workflows/ci-kustomize-dry-run.yaml
               - .github/scripts/install-gke-crds.sh
-              - guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh
+              - guides/recipes/gateway/install-gateway-crds.sh
               - docs/monitoring/scripts/install-prometheus-grafana.sh
               - guides/recipes/modelserver/**
-              - guides/recipes/scheduler/**
+              - guides/recipes/router/**
               - guides/optimized-baseline/**
             pd-disaggregation:
               - .github/workflows/ci-kustomize-dry-run.yaml
               - helpers/client-setup/install-deps.sh
-              - guides/prereq/gateway-provider/common-configurations/**
-              - guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh
-              - guides/prereq/gateway-provider/*.helmfile.yaml
+              - guides/recipes/gateway/install-gateway-crds.sh
               - docs/monitoring/scripts/install-prometheus-grafana.sh
               - guides/pd-disaggregation/**
-            precise-prefix-cache-aware:
+            precise-prefix-cache-routing:
               - .github/workflows/ci-kustomize-dry-run.yaml
               - helpers/client-setup/install-deps.sh
-              - guides/prereq/gateway-provider/common-configurations/**
-              - guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh
-              - guides/prereq/gateway-provider/*.helmfile.yaml
+              - guides/recipes/gateway/install-gateway-crds.sh
               - docs/monitoring/scripts/install-prometheus-grafana.sh
-              - guides/precise-prefix-cache-aware/**
+              - guides/precise-prefix-cache-routing/**
             simulated-accelerators:
               - .github/workflows/ci-kustomize-dry-run.yaml
               - helpers/client-setup/install-deps.sh
-              - guides/prereq/gateway-provider/common-configurations/**
-              - guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh
-              - guides/prereq/gateway-provider/*.helmfile.yaml
+              - guides/recipes/gateway/install-gateway-crds.sh
               - docs/monitoring/scripts/install-prometheus-grafana.sh
               - guides/simulated-accelerators/**
             workload-autoscaling:
               - .github/workflows/ci-kustomize-dry-run.yaml
               - .github/scripts/install-gke-crds.sh
-              - guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh
+              - guides/recipes/gateway/install-gateway-crds.sh
               - docs/monitoring/scripts/install-prometheus-grafana.sh
               - guides/workload-autoscaling/**
 
@@ -91,7 +85,7 @@ jobs:
           wait: 120s
 
       - name: Install Gateway API and GAIE CRDs
-        run: guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh > /dev/null
+        run: guides/recipes/gateway/install-gateway-crds.sh
 
       - name: Install monitoring CRDs
         run: docs/monitoring/scripts/install-prometheus-grafana.sh --crds-only
@@ -104,21 +98,21 @@ jobs:
       - name: Install GKE CRDs
         run: .github/scripts/install-gke-crds.sh
 
-      - name: Dry-run scheduler charts
+      - name: Dry-run router charts
         run: |
-          CHART_VERSION=v1.5.0
+          CHART_VERSION=v0
           failed=0
-          for chart in standalone inferencepool; do
+          for chart in llm-d-router-standalone-dev llm-d-router-gateway-dev; do
             echo ""
             echo "========================================"
-            echo "optimized-baseline: scheduler (${chart})"
+            echo "optimized-baseline: router (${chart})"
             echo "========================================"
             echo "--- helm template ---"
-            if ! helm template optimized-baseline-scheduler \
-              "oci://registry.k8s.io/gateway-api-inference-extension/charts/${chart}" \
-              -f guides/recipes/scheduler/base.values.yaml \
-              -f guides/recipes/scheduler/features/monitoring.values.yaml \
-              -f guides/optimized-baseline/scheduler/optimized-baseline.values.yaml \
+            if ! helm template optimized-baseline-router \
+              "oci://ghcr.io/llm-d/charts/${chart}" \
+              -f guides/recipes/router/base.values.yaml \
+              -f guides/recipes/router/features/monitoring.values.yaml \
+              -f guides/optimized-baseline/router/optimized-baseline.values.yaml \
               --version "${CHART_VERSION}" > /tmp/rendered.yaml; then
               echo "FAIL: helm template failed for ${chart}"
               failed=1
@@ -126,9 +120,9 @@ jobs:
             fi
             echo "--- kubectl apply --dry-run=server ---"
             if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
-              echo "PASS: optimized-baseline / scheduler (${chart})"
+              echo "PASS: optimized-baseline / router (${chart})"
             else
-              echo "FAIL: optimized-baseline / scheduler (${chart})"
+              echo "FAIL: optimized-baseline / router (${chart})"
               failed=1
             fi
           done
@@ -186,52 +180,29 @@ jobs:
           wait: 120s
 
       - name: Install Gateway API and GAIE CRDs
-        run: guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh > /dev/null
-
-      - name: Install gateway providers
-        run: |
-          cd guides/prereq/gateway-provider
-          for f in *.helmfile.yaml; do
-            # Skip kgateway - it is deprecated and its older CRDs would
-            # overwrite the agentgateway installation.
-            [[ "$f" == "kgateway.helmfile.yaml" ]] && continue
-            echo "=== Installing gateway provider: $f ==="
-            helmfile apply -f "$f" > /dev/null
-          done
-
-      - name: Wait for gateway control planes
-        run: |
-          for ns in istio-system agentgateway-system; do
-            if kubectl get namespace "$ns" &>/dev/null; then
-              echo "Waiting for pods in $ns..."
-              kubectl wait --for=condition=ready pod \
-                --selector=app.kubernetes.io/managed-by=Helm \
-                --namespace "$ns" \
-                --timeout=300s 2>/dev/null || true
-            fi
-          done
+        run: guides/recipes/gateway/install-gateway-crds.sh
 
       - name: Install monitoring CRDs
         run: docs/monitoring/scripts/install-prometheus-grafana.sh --crds-only
 
       - name: Install GKE CRDs
         run: .github/scripts/install-gke-crds.sh
-      
-      - name: Dry-run scheduler charts
+
+      - name: Dry-run router charts
         run: |
-          CHART_VERSION=v1.5.0
+          CHART_VERSION=v0
           failed=0
-          for chart in standalone inferencepool; do
+          for chart in llm-d-router-standalone-dev llm-d-router-gateway-dev; do
             echo ""
             echo "========================================"
-            echo "pd-disaggregation: scheduler (${chart})"
+            echo "pd-disaggregation: router (${chart})"
             echo "========================================"
             echo "--- helm template ---"
-            if ! helm template pd-disaggregation-scheduler \
-              "oci://registry.k8s.io/gateway-api-inference-extension/charts/${chart}" \
-              -f guides/recipes/scheduler/base.values.yaml \
-              -f guides/recipes/scheduler/features/monitoring.values.yaml \
-              -f guides/pd-disaggregation/scheduler/pd-disaggregation.values.yaml \
+            if ! helm template pd-disaggregation-router \
+              "oci://ghcr.io/llm-d/charts/${chart}" \
+              -f guides/recipes/router/base.values.yaml \
+              -f guides/recipes/router/features/monitoring.values.yaml \
+              -f guides/pd-disaggregation/router/pd-disaggregation.values.yaml \
               --version "${CHART_VERSION}" > /tmp/rendered.yaml; then
               echo "FAIL: helm template failed for ${chart}"
               failed=1
@@ -239,9 +210,9 @@ jobs:
             fi
             echo "--- kubectl apply --dry-run=server ---"
             if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
-              echo "PASS: pd-disaggregation / scheduler (${chart})"
+              echo "PASS: pd-disaggregation / router (${chart})"
             else
-              echo "FAIL: pd-disaggregation / scheduler (${chart})"
+              echo "FAIL: pd-disaggregation / router (${chart})"
               failed=1
             fi
           done
@@ -277,9 +248,9 @@ jobs:
           done
           exit $failed
 
-  dry-run-precise-prefix-cache-aware:
+  dry-run-precise-prefix-cache-routing:
     needs: detect-changes
-    if: needs.detect-changes.outputs.precise-prefix-cache-aware == 'true'
+    if: needs.detect-changes.outputs.precise-prefix-cache-routing == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -296,7 +267,7 @@ jobs:
           wait: 120s
 
       - name: Install Gateway API and GAIE CRDs
-        run: guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh > /dev/null
+        run: guides/recipes/gateway/install-gateway-crds.sh
 
       - name: Install monitoring CRDs
         run: docs/monitoring/scripts/install-prometheus-grafana.sh --crds-only
@@ -304,46 +275,44 @@ jobs:
       - name: Install GKE CRDs
         run: .github/scripts/install-gke-crds.sh
 
-      - name: Dry-run scheduler (active-active default)
+      - name: Dry-run router (active-active default)
         # ubuntu-latest ships helm v3, which accepts a path for --post-renderer.
         # (helm v4 users instead run `helm plugin install .../uds-tokenizer`
         # once and pass `--post-renderer uds-tokenizer`; see README.)
         run: |
-          CHART_VERSION=v1.5.0
-          POST_RENDERER=./guides/precise-prefix-cache-aware/scheduler/patches/uds-tokenizer/post-renderer.sh
+          CHART_VERSION=v0
           echo ""
           echo "========================================"
-          echo "precise-prefix-cache-aware: scheduler"
+          echo "precise-prefix-cache-routing: router"
           echo "========================================"
           echo "--- helm template ---"
-          if ! helm template precise-prefix-cache-aware \
-            "oci://registry.k8s.io/gateway-api-inference-extension/charts/standalone" \
-            -f guides/recipes/scheduler/base.values.yaml \
-            -f guides/precise-prefix-cache-aware/scheduler/precise-prefix-cache-aware.values.yaml \
-            --post-renderer "${POST_RENDERER}" \
+          if ! helm template precise-prefix-cache-routing \
+            "oci://ghcr.io/llm-d/charts/llm-d-router-standalone-dev" \
+            -f guides/recipes/router/base.values.yaml \
+            -f guides/precise-prefix-cache-routing/router/precise-prefix-cache-routing.values.yaml \
             --version "${CHART_VERSION}" > /tmp/rendered.yaml; then
             echo "FAIL: helm template failed"
             exit 1
           fi
           echo "--- kubectl apply --dry-run=server ---"
           if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
-            echo "PASS: precise-prefix-cache-aware / scheduler"
+            echo "PASS: precise-prefix-cache-routing / router"
           else
-            echo "FAIL: precise-prefix-cache-aware / scheduler"
+            echo "FAIL: precise-prefix-cache-routing / router"
             exit 1
           fi
 
       - name: Kustomize build and dry-run all model server overlays
         run: |
           failed=0
-          for overlay_dir in guides/precise-prefix-cache-aware/modelserver/*/; do
+          for overlay_dir in guides/precise-prefix-cache-routing/modelserver/*/; do
             for kust_dir in "${overlay_dir}"*/; do
               [ -f "${kust_dir}kustomization.yaml" ] || continue
-              name="${kust_dir#guides/precise-prefix-cache-aware/modelserver/}"
+              name="${kust_dir#guides/precise-prefix-cache-routing/modelserver/}"
               name="${name%/}"
               echo ""
               echo "========================================"
-              echo "precise-prefix-cache-aware: ${name}"
+              echo "precise-prefix-cache-routing: ${name}"
               echo "========================================"
               echo "--- kustomize build ---"
               if ! kustomize build "${kust_dir}" > /tmp/rendered.yaml; then
@@ -353,9 +322,9 @@ jobs:
               fi
               echo "--- kubectl apply --dry-run=server ---"
               if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
-                echo "PASS: precise-prefix-cache-aware / ${name}"
+                echo "PASS: precise-prefix-cache-routing / ${name}"
               else
-                echo "FAIL: precise-prefix-cache-aware / ${name}"
+                echo "FAIL: precise-prefix-cache-routing / ${name}"
                 failed=1
               fi
             done
@@ -381,7 +350,7 @@ jobs:
           wait: 120s
 
       - name: Install Gateway API and GAIE CRDs
-        run: guides/prereq/gateway-provider/install-gateway-provider-dependencies.sh > /dev/null
+        run: guides/recipes/gateway/install-gateway-crds.sh
 
       - name: Install monitoring CRDs
         run: docs/monitoring/scripts/install-prometheus-grafana.sh --crds-only

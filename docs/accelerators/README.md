@@ -8,19 +8,20 @@ Maintainers for each accelerator type are listed below. See our well-lit path gu
 
 | Vendor | Models | Maintainers |
 | --- | --- | --- |
-| AMD | ROCm | Kenny Roche (<Kenny.Roche@amd.com>), Vincent Cave (<Vincent.Cave@amd.com>) |
-| CPU | x86_64 | Hongming Zheng (@ZhengHongming888, <hongming.zheng@intel.com>) |
-| Google | [TPU](../infra-providers/gke/README.md#llm-d-on-google-kubernetes-engine-gke) | Edwin Hernandez (@Edwinhr716), Cong Liu (@liu-cong, <congliu.thu@gmail.com>) |
-| Intel | XPU | Yuan Wu (@yuanwu2017, <yuan.wu@intel.com>) |
-| Intel | HPU | Sakari Poussa (@poussa, <sakari.poussa@intel.com>) |
-| NVIDIA | GPU | Will Eaton (<weaton@redhat.com>), Greg (<grpereir@redhat.com>) |
-| Rebellions | NPU | Jinmoo Seok (@rebel-jinmoo, <jinmoo_seok@rebellions.ai>), Minwook Ahn (@rebel-minwook, <minwook.ahn@rebellions.ai>) |
+| AMD | ROCm | Kenny Roche (Kenny.Roche@amd.com), Vincent Cave (Vincent.Cave@amd.com) |
+| CPU | x86_64 | Hongming Zheng (@ZhengHongming888, hongming.zheng@intel.com) |
+| Google | [TPU](../infra-providers/gke/README.md#llm-d-on-google-kubernetes-engine-gke) | Edwin Hernandez (@Edwinhr716), Cong Liu (@liu-cong, congliu.thu@gmail.com) |
+| Intel | XPU | Yuan Wu (@yuanwu2017, yuan.wu@intel.com) |
+| Intel | HPU | Sakari Poussa (@poussa, sakari.poussa@intel.com) |
+| NVIDIA | GPU | Will Eaton (weaton@redhat.com), Greg (grpereir@redhat.com) |
+| Rebellions | NPU | Jinmoo Seok (@rebel-jinmoo, jinmoo_seok@rebellions.ai), Minwook Ahn (@rebel-minwook, minwook.ahn@rebellions.ai) |
 
 ## Requirements
 
 We welcome contributions from accelerator vendors. To be referenced as a supported hardware vendor we require at minimum a publicly available container image that launches vLLM.
 
 For integration into the well-lit paths our standard for contribution is higher, **requiring**:
+
 - A named maintainer responsible for keeping guide contents up to date
 - Manual or automated verification of the guide deployment for each release
 
@@ -64,6 +65,16 @@ AMD GPUs are supported via ROCm. The specific GPU models supported are determine
 Intel Data Center GPU Max 1550 and Intel BMG GPUs (Battlemage G21) are supported. Intel XPU deployments use DRA with a unified accelerator type that automatically handles driver selection for both i915 and xe drivers.
 
 For cluster prerequisites, ensure you have the [Intel Resource Drivers for Kubernetes](https://github.com/intel/intel-resource-drivers-for-kubernetes) installed.
+
+### XPU with RDMA
+
+For P/D disaggregation with RDMA-accelerated KV-cache transfer on Intel XPU, the following additional prerequisites apply:
+
+- An RDMA DRA driver exposing the `rdma-dranet` device class (e.g., [rdma-dranet](https://github.com/k8snetworkplumbingwg/rdma-dra-driver)).
+- GPU-NIC PCIe alignment for optimal transfer performance.
+- UCX transport configured with `ib,rc,ze_copy`.
+
+The RDMA overlay (`modelserver/xpu/vllm-rdma/`) reuses the standard XPU vLLM base and adds one RDMA DRA claim per pod plus RDMA-specific UCX transport settings. See the [P/D Disaggregation guide](../../guides/pd-disaggregation/README.md) for deployment instructions.
 
 ## Intel Gaudi (HPU)
 

@@ -77,6 +77,7 @@ Flow Control is a software-level scheduling feature at the EPP layer and is enti
 
   ```bash
   export GAIE_VERSION=v1.5.0
+  export ROUTER_CHART_VERSION=v0
   export GUIDE_NAME="flow-control"
   export NAMESPACE="llm-d-flow-control"
   export MODEL_NAME="Qwen/Qwen3-32B"
@@ -96,19 +97,19 @@ Flow Control is a software-level scheduling feature at the EPP layer and is enti
 
 ## Installation Instructions
 
-### 1. Deploy the Inference Scheduler
+### 1. Deploy the Router
 
 #### Standalone Mode
 
-This deploys the inference scheduler with an Envoy sidecar, it doesn't set up a Kubernetes Gateway.
+This deploys the router with an Envoy sidecar, it doesn't set up a Kubernetes Gateway.
 
 ```bash
 REPO_ROOT=$(realpath $(git rev-parse --show-toplevel))
 helm install ${GUIDE_NAME} \
-    oci://registry.k8s.io/gateway-api-inference-extension/charts/standalone \
-    -f ${REPO_ROOT}/guides/recipes/scheduler/base.values.yaml \
-    -f ${REPO_ROOT}/guides/${GUIDE_NAME}/scheduler/${GUIDE_NAME}.values.yaml \
-    -n ${NAMESPACE} --version ${GAIE_VERSION}
+    oci://ghcr.io/llm-d/charts/llm-d-router-standalone-dev \
+    -f ${REPO_ROOT}/guides/recipes/router/base.values.yaml \
+    -f ${REPO_ROOT}/guides/${GUIDE_NAME}/router/${GUIDE_NAME}.values.yaml \
+    -n ${NAMESPACE} --version ${ROUTER_CHART_VERSION}
 ```
 
 <details>
@@ -117,18 +118,18 @@ helm install ${GUIDE_NAME} \
 To use a Kubernetes Gateway managed proxy rather than the standalone version, follow these steps instead of applying the previous Helm chart:
 
 1. *Deploy a Kubernetes Gateway* named by following one of [the gateway guides](../prereq/gateways).
-2. *Deploy the inference scheduler and an HTTPRoute* that connects it to the Gateway as follows:
+2. *Deploy the router and an HTTPRoute* that connects it to the Gateway as follows:
 
 ```bash
 export PROVIDER_NAME=gke # options: none, gke, agentgateway, istio
 REPO_ROOT=$(realpath $(git rev-parse --show-toplevel))
 helm install ${GUIDE_NAME} \
-    oci://registry.k8s.io/gateway-api-inference-extension/charts/inferencepool  \
-    -f ${REPO_ROOT}/guides/recipes/scheduler/base.values.yaml \
-    -f ${REPO_ROOT}/guides/recipes/scheduler/features/httproute-flags.yaml \
-    -f ${REPO_ROOT}/guides/${GUIDE_NAME}/scheduler/${GUIDE_NAME}.values.yaml \
+    oci://ghcr.io/llm-d/charts/llm-d-router-gateway-dev  \
+    -f ${REPO_ROOT}/guides/recipes/router/base.values.yaml \
+    -f ${REPO_ROOT}/guides/recipes/router/features/httproute-flags.yaml \
+    -f ${REPO_ROOT}/guides/${GUIDE_NAME}/router/${GUIDE_NAME}.values.yaml \
     --set provider.name=${PROVIDER_NAME} \
-    -n ${NAMESPACE} --version ${GAIE_VERSION}
+    -n ${NAMESPACE} --version ${ROUTER_CHART_VERSION}
 ```
 
 </details>
@@ -208,7 +209,7 @@ curl http://${GUIDE_NAME}-epp:9090/metrics | grep inference_extension_flow_contr
 
 ## Use Cases
 
-### Use Case 1: Multi-Tenancy (MaaS)
+### Use Case 1: Multi-Tenancy (Model-as-a-Service)
 
 In this use case, we configure 3 priority tiers (Premium, Standard, Best-Effort) and guarantee fairness between tenants within the same tier.
 
@@ -237,8 +238,8 @@ Clients must send the appropriate headers to be placed in the correct queues.
 ```bash
 curl -X POST http://${IP}/v1/completions \
   -H 'Content-Type: application/json' \
-  -H 'x-gateway-inference-fairness-id: tenant-a' \
-  -H 'x-gateway-inference-objective: premium-traffic' \
+  -H 'x-llm-d-inference-fairness-id: tenant-a' \
+  -H 'x-llm-d-inference-objective: premium-traffic' \
   -d "{
     \"model\": \"${MODEL_NAME}\",
     \"prompt\": \"Say hello\"
@@ -248,7 +249,7 @@ curl -X POST http://${IP}/v1/completions \
 > [!WARNING]
 > **Trust Boundary**: In a production system, allowing end-users to self-assert their tenant ID or traffic priority (`premium-traffic`) is an abuse vector.
 >
-> **Production Pattern**: Your ingress API Gateway (or an Envoy `ext_authz` filter) should be configured to automatically strip any incoming `x-gateway-*` headers from external traffic. It should then validate the user's API Key or JWT, extract their tier/tenant from the token claims, and securely inject the authoritative `x-gateway-inference-fairness-id` and `x-gateway-inference-objective` headers before passing the request to the EPP.
+> **Production Pattern**: Your ingress API Gateway (or an Envoy `ext_authz` filter) should be configured to automatically strip any incoming `x-llm-d-*` headers, plus the deprecated EPP-managed aliases listed in the [EPP HTTP headers reference](../../docs/api-reference/epp-http-headers.md), from external traffic. Gateway API Inference Extension (GAIE) endpoint picker protocol headers such as `x-gateway-destination-endpoint*` are not part of this stripping rule. After stripping, validate the user's API Key or JWT, extract their tier/tenant from the token claims, and securely inject the authoritative `x-llm-d-inference-fairness-id` and `x-llm-d-inference-objective` headers before passing the request to the EPP.
 
 ### Use Case 2: Backpressure Management
 
@@ -278,8 +279,8 @@ To verify backpressure management, you must overwhelm the pool's capacity. Becau
 
     ```bash
     hey -c 150 -n 150 -m POST -T "application/json" \
-      -H "x-gateway-inference-fairness-id: tenant-b" \
-      -H "x-gateway-inference-objective: best-effort-traffic" \
+      -H "x-llm-d-inference-fairness-id: tenant-b" \
+      -H "x-llm-d-inference-objective: best-effort-traffic" \
       -D payload.json http://${IP}/v1/completions
     ```
 

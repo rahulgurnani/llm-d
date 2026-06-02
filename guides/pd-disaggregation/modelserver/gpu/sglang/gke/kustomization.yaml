@@ -3,4 +3,4 @@ kind: Kustomization
 resources:
   - ../base
 components:
-  - ../../../../../recipes/modelserver/components/disable-gke-nccl-tuner-patch
+  - ../../../components/gke-rdma

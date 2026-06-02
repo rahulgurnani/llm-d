@@ -1,10 +1,10 @@
-# PD-Disaggregation on GKE A3 Ultra (H200)
+# PD-Disaggregation on GKE
 
-This guide provides specific instructions for deploying PD-disaggregation with RDMA (RoCE) on GKE using NVIDIA H200 GPUs (A3 Ultra). **Note**: This is picked from [official GCP page](https://docs.cloud.google.com/ai-hypercomputer/docs/create/gke-ai-hypercompute-custom). Follow the official GCP guide for latest updates and detailed instructions.
+This guide provides specific instructions for deploying PD-disaggregation with RDMA (RoCE) on GKE. For the puposes of this guide, we will be using NVIDIA H200 GPUs on A3 Ultra. **Note**: This is picked from [official GCP page](https://docs.cloud.google.com/ai-hypercomputer/docs/create/gke-ai-hypercompute-custom). Follow the official GCP guide for latest updates and detailed instructions.
 
 ## Prerequisites
 
-1.  A GKE cluster in a region where A3 Ultra is available (e.g., `us-south1` or `us-central1`).
+1.  A GKE cluster in a region where A3 Ultra is available (e.g., `us-south1` or `us-central1`). Lets take `us-south1` for this guide.
 2.  The following environment variables set:
     ```bash
     export PROJECT_ID="your-project-id"

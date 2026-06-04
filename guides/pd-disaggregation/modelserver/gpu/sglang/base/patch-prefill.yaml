@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: prefill
 spec:
-  replicas: 8
+  replicas: 4 # Reduced replicas to fit TP=4/TP=8 on A3 Ultra nodes.
   template:
     spec:
       containers:
@@ -15,19 +15,21 @@ spec:
             - "--host=0.0.0.0"
             - "--disaggregation-mode=prefill"
             - "--disaggregation-transfer-backend=nixl"
-            - "--tensor-parallel-size=1"
+            # For 120B model, TP=4 or TP=8 is required to avoid CUDA OOM.
+            # If restarts cause "unbalanced memory" errors, delete the deployment entirely and redeploy.
+            - "--tensor-parallel-size=4"
             - "--log-level=info"
             - "--enable-metrics"
             - "--uvicorn-access-log-exclude-prefixes=/metrics"
           resources:
             limits:
-              cpu: "8"
-              memory: 16Gi
-              nvidia.com/gpu: "1"
+              cpu: "16"
+              memory: 64Gi
+              nvidia.com/gpu: "4"
             requests:
-              cpu: "8"
-              memory: 16Gi
-              nvidia.com/gpu: "1"
+              cpu: "16"
+              memory: 64Gi
+              nvidia.com/gpu: "4"
           volumeMounts:
             - mountPath: /dev/shm
               name: shm

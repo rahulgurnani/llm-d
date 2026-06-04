@@ -24,6 +24,9 @@ Deploy SGLang with the GKE overlay. Note that the GKE overlay uses `privileged: 
 2.  **Tensor Parallel (TP)** is set to **8** to utilize the full node memory.
 3.  **Pod Anti-Affinity** is configured to keep roles separated.
 
+> [!IMPORTANT]
+> **Avoid CUDA OOM and Memory Imbalance:** For models like `gpt-oss-120b`, ensuring `TP=8` is critical. If deploying with lower TP sizes, you may encounter `torch.OutOfMemoryError`. Additionally, if pods restart frequently during setup, you might see `RuntimeError: The memory capacity is unbalanced`. In such cases, perform a hard cleanup by deleting the deployment entirely (`kubectl delete deployment ...`), waiting for GPU memory to clear, and then redeploying.
+
 ```bash
 kubectl apply -n ${NAMESPACE} -k guides/pd-disaggregation/modelserver/gpu/sglang/gke/
 ```

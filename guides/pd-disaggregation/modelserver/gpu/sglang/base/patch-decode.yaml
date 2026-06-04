@@ -15,6 +15,7 @@ spec:
             - "--host=0.0.0.0"
             - "--disaggregation-mode=decode"
             - "--disaggregation-transfer-backend=nixl"
+            # For 120B model, TP=4 or TP=8 is required to avoid CUDA OOM.
             - "--tensor-parallel-size=4"
             - "--log-level=info"
             - "--enable-metrics"

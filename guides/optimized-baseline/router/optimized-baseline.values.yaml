@@ -19,6 +19,9 @@ router:
         - type: kv-cache-utilization-scorer
         - type: prefix-cache-scorer
         - type: no-hit-lru-scorer
+        - type: approx-prefix-cache-producer
+          parameters:
+            blockSizeTokens: 64
         schedulingProfiles:
         - name: default
           plugins:

@@ -11,7 +11,7 @@
 
 ## Overview
 
-This guide provides recipes to offload prefix cache to CPU RAM via the vLLM native offloading connector, LMCache connector and tpu-inference KVCache connector. Offloading prefix cache to CPU helps in increasing overall throughput and mitigating memory starvation on HBM for large context models and frequent multi-turn user sessions.
+This guide provides recipes to offload prefix cache to CPU RAM via the vLLM native offloading connector, LMCache connector and tpu-inference KVCache connector. For SGLang, the guide uses HiCache for CPU offloading. Offloading prefix cache to CPU helps in increasing overall throughput and mitigating memory starvation on HBM for large context models and frequent multi-turn user sessions.
 
 ## Default Configuration
 

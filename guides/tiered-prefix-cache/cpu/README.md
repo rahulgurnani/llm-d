@@ -124,7 +124,7 @@ export INFRA_PROVIDER=base # base | gke
 kubectl apply -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/cpu/modelserver/gpu/vllm/${CONNECTOR}/${INFRA_PROVIDER}/
 ```
 
-For Sglang with HiCache on a GPU deployment:
+**For Sglang with HiCache on a GPU deployment**
 
 ```bash
 kubectl apply -n ${NAMESPACE} -k guides/tiered-prefix-cache/cpu/modelserver/gpu/sglang/hicache/
@@ -202,6 +202,8 @@ To clean up the applied deployment components:
 ```bash
 helm uninstall ${GUIDE_NAME} -n ${NAMESPACE}
 kubectl delete -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/cpu/modelserver/gpu/vllm/${CONNECTOR}/${INFRA_PROVIDER}
+# For sglang hicache deployment:
+kubectl delete -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/cpu/modelserver/gpu/sglang/hicache/ --ignore-not-found
 kubectl delete namespace ${NAMESPACE}
 ```
 

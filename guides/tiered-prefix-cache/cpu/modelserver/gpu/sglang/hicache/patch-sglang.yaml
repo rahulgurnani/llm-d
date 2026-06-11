@@ -24,8 +24,8 @@ spec:
             - "write_through"
             - "--hicache-io-backend"
             - "kernel"
-            - "--hicache-ratio"
-            - "1.2"
+            - "--hicache-size"
+            - "200"
           env:
             - name: NAMESPACE
               valueFrom:
@@ -38,12 +38,12 @@ spec:
           resources:
             limits:
               nvidia.com/gpu: "2"
-              cpu: "8"
-              memory: 64Gi
+              cpu: "16"
+              memory: 400Gi
             requests:
               nvidia.com/gpu: "2"
-              cpu: "2"
-              memory: 32Gi
+              cpu: "8"
+              memory: 200Gi
           volumeMounts:
             - mountPath: /.config
               name: metrics-volume

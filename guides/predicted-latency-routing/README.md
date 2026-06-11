@@ -134,7 +134,9 @@ kubectl apply -n ${NAMESPACE} -k ${REPO_ROOT}/guides/optimized-baseline/modelser
 
 ### 3. Enable monitoring (optional)
 
-Follow [optimized-baseline → Enable monitoring](../optimized-baseline/README.md#3-enable-monitoring-optional) — the same steps apply since this guide reuses the same model server manifests.
+Follow [optimized-baseline → Enable monitoring](../optimized-baseline/README.md#3-optional-enable-monitoring) — the same steps apply since this guide reuses the same model server manifests.
+
+To enable monitoring for the `llm-d-router`, refer to the [Router Monitoring & Tracing Configuration](https://github.com/llm-d/llm-d-router/tree/main/config/charts#4-monitoring--tracing-configuration).
 
 ## Send Requests
 

@@ -124,7 +124,7 @@ export INFRA_PROVIDER=base # base | gke
 kubectl apply -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/cpu/modelserver/gpu/vllm/${CONNECTOR}/${INFRA_PROVIDER}/
 ```
 
-**For Sglang with HiCache on a GPU deployment**
+**For SGlang with HiCache on a GPU deployment**
 
 ```bash
 kubectl apply -n ${NAMESPACE} -k guides/tiered-prefix-cache/cpu/modelserver/gpu/sglang/hicache/

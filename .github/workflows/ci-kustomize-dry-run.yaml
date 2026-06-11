@@ -131,31 +131,28 @@ jobs:
       - name: Kustomize build and dry-run all model server overlays
         run: |
           failed=0
-          for overlay_dir in guides/optimized-baseline/modelserver/*/; do
-            # Each accelerator dir may have one or more server subdirs (vllm, sglang)
-            for kust_dir in "${overlay_dir}"*/; do
-              [ -f "${kust_dir}kustomization.yaml" ] || continue
-              name="${kust_dir#guides/optimized-baseline/modelserver/}"
-              name="${name%/}"
-              echo ""
-              echo "========================================"
-              echo "optimized-baseline: ${name}"
-              echo "========================================"
-              echo "--- kustomize build ---"
-              if ! kustomize build "${kust_dir}" > /tmp/rendered.yaml; then
-                echo "FAIL: kustomize build failed for ${name}"
-                failed=1
-                continue
-              fi
-              echo "--- kubectl apply --dry-run=server ---"
-              if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
-                echo "PASS: optimized-baseline / ${name}"
-              else
-                echo "FAIL: optimized-baseline / ${name}"
-                failed=1
-              fi
-            done
-          done
+          # Find all directories containing a kustomization.yaml file
+          while IFS= read -r kust_dir; do
+            [ -f "${kust_dir}/kustomization.yaml" ] || continue
+            name="${kust_dir#guides/optimized-baseline/modelserver/}"
+            echo ""
+            echo "========================================"
+            echo "optimized-baseline: ${name}"
+            echo "========================================"
+            echo "--- kustomize build ---"
+            if ! kustomize build "${kust_dir}" > /tmp/rendered.yaml; then
+              echo "FAIL: kustomize build failed for ${name}"
+              failed=1
+              continue
+            fi
+            echo "--- kubectl apply --dry-run=server ---"
+            if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
+              echo "PASS: optimized-baseline / ${name}"
+            else
+              echo "FAIL: optimized-baseline / ${name}"
+              failed=1
+            fi
+          done < <(find guides/optimized-baseline/modelserver -name kustomization.yaml -exec dirname {} \;)
           exit $failed
 
   dry-run-pd-disaggregation:
@@ -221,31 +218,28 @@ jobs:
       - name: Kustomize build and dry-run all model server overlays
         run: |
           failed=0
-          for overlay_dir in guides/pd-disaggregation/modelserver/*/; do
-            # Each accelerator dir may have one or more server subdirs (vllm, sglang)
-            for kust_dir in "${overlay_dir}"*/; do
-              [ -f "${kust_dir}kustomization.yaml" ] || continue
-              name="${kust_dir#guides/pd-disaggregation/modelserver/}"
-              name="${name%/}"
-              echo ""
-              echo "========================================"
-              echo "pd-disaggregation: ${name}"
-              echo "========================================"
-              echo "--- kustomize build ---"
-              if ! kustomize build "${kust_dir}" > /tmp/rendered.yaml; then
-                echo "FAIL: kustomize build failed for ${name}"
-                failed=1
-                continue
-              fi
-              echo "--- kubectl apply --dry-run=server ---"
-              if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
-                echo "PASS: pd-disaggregation / ${name}"
-              else
-                echo "FAIL: pd-disaggregation / ${name}"
-                failed=1
-              fi
-            done
-          done
+          # Find all directories containing a kustomization.yaml file
+          while IFS= read -r kust_dir; do
+            [ -f "${kust_dir}/kustomization.yaml" ] || continue
+            name="${kust_dir#guides/pd-disaggregation/modelserver/}"
+            echo ""
+            echo "========================================"
+            echo "pd-disaggregation: ${name}"
+            echo "========================================"
+            echo "--- kustomize build ---"
+            if ! kustomize build "${kust_dir}" > /tmp/rendered.yaml; then
+              echo "FAIL: kustomize build failed for ${name}"
+              failed=1
+              continue
+            fi
+            echo "--- kubectl apply --dry-run=server ---"
+            if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
+              echo "PASS: pd-disaggregation / ${name}"
+            else
+              echo "FAIL: pd-disaggregation / ${name}"
+              failed=1
+            fi
+          done < <(find guides/pd-disaggregation/modelserver -name kustomization.yaml -exec dirname {} \;)
           exit $failed
 
   dry-run-precise-prefix-cache-routing:
@@ -304,30 +298,28 @@ jobs:
       - name: Kustomize build and dry-run all model server overlays
         run: |
           failed=0
-          for overlay_dir in guides/precise-prefix-cache-routing/modelserver/*/; do
-            for kust_dir in "${overlay_dir}"*/; do
-              [ -f "${kust_dir}kustomization.yaml" ] || continue
-              name="${kust_dir#guides/precise-prefix-cache-routing/modelserver/}"
-              name="${name%/}"
-              echo ""
-              echo "========================================"
-              echo "precise-prefix-cache-routing: ${name}"
-              echo "========================================"
-              echo "--- kustomize build ---"
-              if ! kustomize build "${kust_dir}" > /tmp/rendered.yaml; then
-                echo "FAIL: kustomize build failed for ${name}"
-                failed=1
-                continue
-              fi
-              echo "--- kubectl apply --dry-run=server ---"
-              if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
-                echo "PASS: precise-prefix-cache-routing / ${name}"
-              else
-                echo "FAIL: precise-prefix-cache-routing / ${name}"
-                failed=1
-              fi
-            done
-          done
+          # Find all directories containing a kustomization.yaml file
+          while IFS= read -r kust_dir; do
+            [ -f "${kust_dir}/kustomization.yaml" ] || continue
+            name="${kust_dir#guides/precise-prefix-cache-routing/modelserver/}"
+            echo ""
+            echo "========================================"
+            echo "precise-prefix-cache-routing: ${name}"
+            echo "========================================"
+            echo "--- kustomize build ---"
+            if ! kustomize build "${kust_dir}" > /tmp/rendered.yaml; then
+              echo "FAIL: kustomize build failed for ${name}"
+              failed=1
+              continue
+            fi
+            echo "--- kubectl apply --dry-run=server ---"
+            if kubectl apply --dry-run=server -f /tmp/rendered.yaml; then
+              echo "PASS: precise-prefix-cache-routing / ${name}"
+            else
+              echo "FAIL: precise-prefix-cache-routing / ${name}"
+              failed=1
+            fi
+          done < <(find guides/precise-prefix-cache-routing/modelserver -name kustomization.yaml -exec dirname {} \;)
           exit $failed
 
   dry-run-workload-autoscaling:

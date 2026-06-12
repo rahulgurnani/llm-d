@@ -69,7 +69,7 @@ Generally multiple cache tiers can be applied ordered by their cache read/write 
 | LMCache Connector | CPU RAM | `modelserver/gpu/vllm/lmcache-connector/cpu/` |
 | LMCache Connector | Filesystem (shared storage) | `modelserver/gpu/vllm/lmcache-connector/fs/` |
 | TPU KVCache Connector | CPU RAM | `modelserver/tpu-v7/vllm/tpu-offloading-connector/` |
-| SGLang HiCache | CPU RAM | `modelserver/gpu/sglang/hicache/` |
+| SGLang HiCache | CPU RAM | `modelserver/gpu/sglang/native/cpu/` |
 
 <details>
 <summary><h4>About vLLM Native OffloadingConnector</h4></summary>
@@ -218,17 +218,13 @@ Select the connector and infrastructure provider matching your environment:
 **For NVIDIA GPU — CPU offloading only:**
 
 ```bash
+export MODEL_SERVER=vllm # vllm | sglang
 export CONNECTOR=native  # native | lmcache-connector
 export VARIANT=cpu       # cpu 
 export INFRA_PROVIDER=base  # base | gke
-kubectl apply -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/modelserver/gpu/vllm/${CONNECTOR}/${VARIANT}/${INFRA_PROVIDER}/
+kubectl apply -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/modelserver/gpu/${MODEL_SERVER}/${CONNECTOR}/${VARIANT}/${INFRA_PROVIDER}/
 ```
 
-**For NVIDIA GPU — SGLang with HiCache:**
-
-```bash
-kubectl apply -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/modelserver/gpu/sglang/hicache/
-```
 
 **For NVIDIA GPU — filesystem (shared storage) tier:**
 
@@ -353,7 +349,7 @@ If you have monitoring set up, confirm via `vllm:kv_offload_total_bytes` (native
 ```bash
 helm uninstall tiered-prefix-cache -n ${NAMESPACE}
 kubectl delete -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/modelserver/gpu/vllm/${CONNECTOR}/${VARIANT}/${INFRA_PROVIDER}
-kubectl delete -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/modelserver/gpu/sglang/hicache/ --ignore-not-found
+kubectl delete -n ${NAMESPACE} -k ${REPO_ROOT}/guides/tiered-prefix-cache/modelserver/gpu/sglang/${CONNECTOR}/${VARIANT}/${INFRA_PROVIDER} --ignore-not-found
 kubectl delete -f ${REPO_ROOT}/guides/tiered-prefix-cache/manifests/pvc.yaml -n ${NAMESPACE}  # if PVC was created
 kubectl delete namespace ${NAMESPACE}
 ```

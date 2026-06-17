@@ -84,14 +84,6 @@ EPP continuously probes each endpoints' metrics by scraping `/metrics` at a regu
 
 ---
 
-### Multimodal Embedding (vision encoder) cache aware routing
-
-EPP can optimize routing for multimodal requests by considering the state of the multimodal embeddings cache (e.g., vision encoder cache) on serving endpoints. This ensures that requests with large multimodal inputs (like images or videos) are routed to endpoints that likely already have those embeddings cached, significantly reducing latency and computation.
-
-Refer to the [llm-d-router docs](https://github.com/llm-d/llm-d-router/blob/main/pkg/epp/framework/plugins/scheduling/scorer/mmcacheaffinity/README.md) for more details.
-
----
-
 ## Further Reading
 
 * See [Optimized Baseline](../well-lit-paths/optimized-baseline.md) for details on text-based scheduling and general load-balancing.

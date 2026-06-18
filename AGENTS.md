@@ -2,39 +2,19 @@
 
 Guide for AI coding agents working in this repository.
 
-## What This Repo Is
+## Agent Operating Rules
 
-**llm-d** is a Kubernetes-native distributed LLM inference serving stack. It is a documentation and configuration repo — it contains Helm values, Kustomize manifests, shell scripts, Dockerfiles, and deployment guides. There is no application source code to compile or unit-test here.
+- **Allowed:** Edit configuration, manifests, scripts, and documentation; run local dry-runs and linting; read the codebase and GitHub state.
+- **Ask first:** Pushing commits to any branch (including feature branches), rewriting pushed history, edits under `.github/` or to `OWNERS`, dependency upgrades. When asking, propose the specific change and the reason in one message; do not start the work in the same turn.
+- **Never, without explicit per-turn authorization:** Public actions under the user's identity: GitHub comments, reviews, reactions, PR state changes, label or reviewer assignment, posts to Slack or any external surface. Draft such replies as quoted text for the user to send. Authorization is per-action and does not carry between actions or to sub-agents.
 
-The primary outputs are:
-- **Well-lit path guides** (`guides/`) — tested, benchmarked recipes for deploying vLLM + the llm-d router on Kubernetes.
-- **Container image build infrastructure** (`docker/`) — Dockerfiles for CUDA, ROCm, HPU, and RDMA-tools images.
-- **Helper scripts** (`scripts/`, `helpers/`) — linting, benchmarking, and environment setup utilities.
+## Working in the Codebase
 
-## Repository Layout
-
-```
-guides/                  # Deployment guides, one directory per pattern
-  optimized-baseline/    # Prefix-cache + load-aware routing (recommended starting point)
-  pd-disaggregation/     # Prefill/decode disaggregation
-  wide-ep-lws/           # Wide expert-parallelism (MoE)
-  predicted-latency-routing/
-  precise-prefix-cache-routing/
-  tiered-prefix-cache/
-  flow-control/
-  workload-autoscaling/
-  rollouts/
-  asynchronous-processing/   # Experimental
-  batch-gateway/             # Experimental
-  prereq/                    # Shared prerequisites (gateways, model servers, etc.)
-  recipes/                   # Reusable Helm values snippets
-docs/                    # Architecture docs, proposals, accelerator notes
-docker/                  # Dockerfiles and build scripts per accelerator
-scripts/                 # Linting and CI utilities
-helpers/                 # Benchmark tooling, HF token setup
-hooks/                   # Git pre-commit hooks
-.github/workflows/       # CI: PR checks, nightly e2e, image builds, releases
-```
+- State your interpretation before making changes. When the task has multiple valid reads, ask; don't pick one silently. For clear failure signals (logs, rendering failures, reproducer), act; the ask rule is about unclear requirements, not unclear bugs.
+- Define success as a checkable outcome: e.g., "add validation" becomes "write validation to helper script, then run it with invalid inputs to confirm it fails". Where the issue is reproducible, the local verification command (e.g. kustomize dry-run or script execution) is the success criterion.
+- Before changing or extending a component (like a guide or helper script), read an analogous one in the repository. The closest existing implementation is the canonical pattern; follow its structure, naming, and configuration patterns rather than introducing new conventions.
+- Verify behavior against the actual configuration and scripts, not from filenames or familiarity. Run the linting scripts or render the Kustomize manifests when uncertain.
+- Do not claim work is complete without running local verification and confirming the relevant output. "Dry-run/Linter passes" is a claim, not a fact, until the command output exists.
 
 ## Conventions to Follow
 
@@ -111,144 +91,7 @@ For any PR, CI checks that matter are `ci-pr-checks.yaml` and `ci-kustomize-dry-
 
 ## Writing Nightly E2E Tests
 
-Nightly tests live in `.github/workflows/nightly-e2e-<guide-name>-<platform>.yaml`. Each file is a thin wrapper that calls a reusable workflow from `llm-d/llm-d-infra` — no test logic lives in this repo.
-
-### File Naming
-
-```
-nightly-e2e-<guide-name>-<platform>.yaml
-```
-
-Platforms in use: `gke`, `ocp` (OpenShift), `cks` (CoreWeave), `gke-tpu`, `xpu`, `hpu`.
-
-Examples: `nightly-e2e-optimized-baseline-gke.yaml`, `nightly-e2e-wide-ep-lws-ocp.yaml`.
-
-### Minimal Workflow Template
-
-```yaml
-name: Nightly - <Human Readable Guide Name> E2E (<PLATFORM>)
-
-# One-line description of what this test covers.
-
-on:
-  schedule:
-    - cron: '0 10 * * *'  # HH:MM UTC daily (staggered from <other nightly> at HH:MM)
-  workflow_dispatch:
-    inputs:
-      skip_cleanup:
-        description: 'Skip cleanup after tests (for debugging)'
-        required: false
-        default: 'false'
-      pr_number:
-        description: 'PR number for comment-back (set by /test-nightly)'
-        required: false
-        default: ''
-      pr_repo:
-        description: 'Repo for PR comment-back'
-        required: false
-        default: 'llm-d/llm-d'
-
-permissions:
-  contents: read
-
-concurrency:
-  group: nightly-e2e-<guide-name>-<platform>
-  cancel-in-progress: true
-
-jobs:
-  nightly:
-    if: github.repository == 'llm-d/llm-d'
-    uses: llm-d/llm-d-infra/.github/workflows/reusable-nightly-e2e-<platform>.yaml@main
-    with:
-      guide_name: <guide-name>
-      namespace: llm-d-nightly-<short-guide>-<platform>
-      gateway_host: '<guide-name>-epp'
-      custom_deploy_script: |
-        export GAIE_VERSION=v1.5.0
-        export ROUTER_CHART_VERSION=v0
-        export GUIDE_NAME="<guide-name>"
-        export INFRA_PROVIDER="<platform>"
-        kubectl apply -n ${NAMESPACE} -k guides/${GUIDE_NAME}/modelserver/gpu/vllm/${INFRA_PROVIDER}
-        helm install ${GUIDE_NAME} \
-          oci://ghcr.io/llm-d/charts/llm-d-router-standalone-dev \
-          -f guides/recipes/router/base.values.yaml \
-          -f guides/${GUIDE_NAME}/router/${GUIDE_NAME}.values.yaml \
-          -n ${NAMESPACE} --version ${ROUTER_CHART_VERSION}
-      required_gpus: 2
-      recommended_gpus: 4
-      accelerator_type: H100
-      pod_wait_timeout: '30m'
-      pod_readiness_delay: 0
-      image_override: 'ghcr.io/llm-d/llm-d-cuda-dev:latest'
-      allow_gpu_preemption: true
-      skip_cleanup: ${{ github.event.inputs.skip_cleanup == 'true' }}
-      pr_number: ${{ github.event.inputs.pr_number }}
-      pr_repo: ${{ github.event.inputs.pr_repo }}
-    secrets: inherit
-```
-
-### Required Fields and Rules
-
-| Field | Rule |
-|---|---|
-| `permissions` | Always `contents: read` — never elevate. |
-| `concurrency.group` | `nightly-e2e-<guide-name>-<platform>` — must be unique per file. |
-| `if: github.repository == 'llm-d/llm-d'` | Always present — prevents forks from running against shared clusters. |
-| `namespace` | Pattern: `llm-d-nightly-<short-guide>-<platform>`. Use consistent short names (e.g., `pd` for pd-disaggregation, `wide-ep` for wide-ep-lws). |
-| `image_override` | Always use the `-dev` floating tag (`ghcr.io/llm-d/llm-d-cuda-dev:latest`). Never pin to a specific digest in a nightly. |
-| `custom_deploy_script` | Must mirror the guide's README install steps exactly — same `kubectl apply -k` and `helm install` commands, same flags. Drift here causes false passes. |
-| `skip_cleanup` / `pr_number` / `pr_repo` | All three must be present as `workflow_dispatch` inputs — required by the `/test-nightly` slash command. |
-
-### Cron Scheduling
-
-Nightlies are staggered to avoid saturating shared GPU clusters. Current schedule boundaries:
-
-- `23:00 UTC` — nightly image build (must complete before any e2e)
-- `00:00–06:00 UTC` — OpenShift (OCP) nightlies
-- `06:00–08:00 UTC` — CKS (CoreWeave) nightlies
-- `10:00–13:00 UTC` — GKE nightlies
-
-When adding a new nightly, pick a slot in the appropriate platform window with at least 30 minutes of gap from adjacent jobs on the same platform. Add a comment on the cron line explaining the offset:
-
-```yaml
-- cron: '30 10 * * *'  # 10:30 UTC daily (staggered from optimized-baseline-gke at 10:00)
-```
-
-### Pre-deploy Dependencies
-
-If the guide requires extra cluster prerequisites (e.g., LeaderWorkerSet CRDs for `wide-ep-lws`), use a `pre_deploy_script` block. Always guard installs with an existence check to make idempotent:
-
-```yaml
-pre_deploy_script: |
-  if ! kubectl get crd <crd-name> &>/dev/null; then
-    helm install ...
-  fi
-```
-
-### Slim Transforms for Resource-Constrained Platforms
-
-Some platforms (OpenShift nightly clusters) have fewer GPUs than the production guide requires. For these, create a `nightly` kustomize overlay under `guides/<guide-name>/modelserver/gpu/vllm/nightly/` that swaps in a smaller model (e.g., `Qwen/Qwen3-0.6B` instead of DeepSeek-R1) and reduces GPU counts. Document the swap clearly in the workflow comment header.
-
-### Registering with `/test-nightly`
-
-After adding a new workflow file, register its name in `.github/workflows/slash-test-nightly.yaml` in two places:
-
-1. The `E2E_NIGHTLIES` array in the `Parse command` step (the part after `nightly-e2e-` in the filename).
-2. The comment block at the top of the file listing available nightlies.
-
-Failing to do this means `/test-nightly <your-guide>` will return "Unknown nightly" for all PR contributors.
-
-### GKE-Specific Fields
-
-GKE workflows require two extra fields not present in OCP/CKS:
-
-```yaml
-gke_cluster_name: llm-d-e2e-us-east5   # or llm-d-e2e-us-south1-2 for H200
-gke_cluster_zone: us-east5
-llm_d_ref: ${{ github.ref }}
-```
-
-Use `us-east5` (H100) for standard guides and `us-south1` (H200) for guides requiring higher memory (pd-disaggregation, wide-ep-lws).
+Nightly tests live in `.github/workflows/nightly-e2e-<guide-name>-<platform>.yaml`. For details on file naming, minimal templates, cron scheduling, and platform-specific fields, refer to the [Nightly E2E Tests Guide](docs/nightly-e2e.md).
 
 ## Key Version Variables
 

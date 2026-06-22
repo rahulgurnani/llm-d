@@ -359,8 +359,6 @@ The benchmark runs on 16× H100 GPUs, distributed across 8 model servers (2 H100
 
 #### Comparing llm-d Scheduling to a Simple Kubernetes Service
 
-Benchmark run with the canonical shared-prefix workload from this guide, comparing the precise path against a plain Kubernetes Service (round-robin, no EPP, no scoring) across the same SGLang pods. llm-d Precise shows a massive improvement over the k8s baseline — delivering nearly 2× overall output throughput with TTFT held completely constant and stable (sub-500ms) under peak load, while the SGLang k8s baseline degrades sharply.
-
 Summary across the full ladder (rates 3 → 60):
 
 | Metric              | k8s service (RR) | llm-d Precise | Δ% vs k8s |

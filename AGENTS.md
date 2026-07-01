@@ -18,30 +18,6 @@ Guide for AI coding agents working in this repository.
 
 ## Conventions to Follow
 
-### Guides Structure
-
-Each guide directory follows the same pattern:
-- `README.md` — the user-facing deployment guide
-- `router/` — Helm values for the llm-d router
-- `modelserver/` — Kustomize overlays for vLLM pods
-- `benchmark-templates/` — load test configurations (where applicable)
-
-When editing a guide, keep all code blocks copy-paste ready — users run them verbatim. Environment variables must be set via `export` before use and must be consistent across all code blocks in the guide.
-
-### Environment Variables in Shell Scripts
-
-All scripts under `docker/scripts/` must declare required env vars in a standardized header block. The linter (`scripts/lint-envvars.py`) enforces this. Format:
-
-```bash
-# Required environment variables:
-# - VAR_NAME: description
-```
-
-Run the linter before committing changes to any script:
-```bash
-./scripts/lint-envvars.py docker/scripts/path/to/script.sh
-```
-
 ### Commit Requirements
 
 Every commit **must** include a DCO sign-off line:
@@ -78,7 +54,6 @@ For any PR, CI checks that matter are `ci-pr-checks.yaml` and `ci-kustomize-dry-
 - Edit `README.md` files in guides to fix accuracy, improve clarity, or update version numbers.
 - Update Helm values files (`values.yaml`, `values-*.yaml`) in `guides/*/router/` and `guides/*/modelserver/`.
 - Update Kustomize overlays (`kustomization.yaml`, patch files) in guide directories.
-- Fix env var declarations in `docker/scripts/` shell scripts to satisfy the linter.
 - Keep code blocks in guides consistent when environment variables or version pins change.
 
 **Do not:**
@@ -89,15 +64,14 @@ For any PR, CI checks that matter are `ci-pr-checks.yaml` and `ci-kustomize-dry-
 - Break the kustomize dry-run — always check that `kubectl kustomize` succeeds on any overlay you touch.
 - Add speculative error handling or defensive abstractions not required by the immediate task.
 
+
+## Code style
+
+- Comments are terse and only present when the WHY is non-obvious. Never paraphrase the code.
+- Docs and comments describe the current state on its own terms. No "previously", "now", "recently", "renamed from", "added to fix", or other temporal or conversational framing. A reader with no context for the change must still understand the text.
+- State each fact once, in its canonical location. Do not duplicate across struct docs, prose, tables, inline comments, and examples.
+- Do not use Unicode symbols or special characters in general, unless explicitly requested.
+
 ## Writing Nightly E2E Tests
 
 Nightly tests live in `.github/workflows/nightly-e2e-<guide-name>-<platform>.yaml`. For details on file naming, minimal templates, cron scheduling, and platform-specific fields, refer to the [Nightly E2E Tests Guide](docs/nightly-e2e.md).
-
-## Key Version Variables
-
-Guides pin component versions via exported shell variables. Common ones:
-- `GAIE_VERSION` — Gateway API Inference Extension CRD version
-- `ROUTER_CHART_VERSION` — llm-d router Helm chart version
-- `NAMESPACE` — Kubernetes namespace for the deployment
-
-When bumping a version, update it in every code block and any values files within the same guide. Check `guides/prereq/` for shared version pins that may also need updating.

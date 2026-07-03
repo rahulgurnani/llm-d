@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pd-disaggregation-nvidia-gpu-sglang-prefill
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    spec:
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      resourceClaims:
+        - name: gpu-claim-0
+          resourceClaimTemplateName: gpu-nic-rail-0
+        - name: gpu-claim-1
+          resourceClaimTemplateName: gpu-nic-rail-1
+        - name: gpu-claim-2
+          resourceClaimTemplateName: gpu-nic-rail-2
+        - name: gpu-claim-3
+          resourceClaimTemplateName: gpu-nic-rail-3
+        - name: gpu-claim-4
+          resourceClaimTemplateName: gpu-nic-rail-4
+        - name: gpu-claim-5
+          resourceClaimTemplateName: gpu-nic-rail-5
+        - name: gpu-claim-6
+          resourceClaimTemplateName: gpu-nic-rail-6
+        - name: gpu-claim-7
+          resourceClaimTemplateName: gpu-nic-rail-7
+      containers:
+        - name: modelserver
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              export SGLANG_HOST_IP=$(python3 -c "import psutil; print(psutil.net_if_addrs()['gpu0rdma0'][0].address)")
+              echo "Detected SGLANG_HOST_IP=${SGLANG_HOST_IP}"
+              python3 -m sglang.launch_server \
+                --model-path=openai/gpt-oss-120b \
+                --port=8000 \
+                --host=0.0.0.0 \
+                --disaggregation-mode=prefill \
+                --disaggregation-transfer-backend=nixl \
+                --tensor-parallel-size=8 \
+                --log-level=debug \
+                --enable-metrics \
+                --uvicorn-access-log-exclude-prefixes=/metrics \
+                --disaggregation-bootstrap-port=8998
+          env:
+            - name: LD_LIBRARY_PATH
+              value: "/usr/local/nvidia/lib64"
+            - name: UCX_LOG_LEVEL
+              value: "INFO"
+            - name: UCX_TLS
+              value: "tcp,cuda_copy,sm,self"
+            - name: UCX_CUDA_COPY_DMABUF
+              value: "n"
+            - name: UCX_MEMTYPE_CACHE
+              value: "n"
+          resources:
+            limits:
+              cpu: "120"
+              memory: 800Gi
+              nvidia.com/gpu: null
+            requests:
+              cpu: "60"
+              memory: 250Gi
+              nvidia.com/gpu: null
+            claims:
+              - name: gpu-claim-0
+              - name: gpu-claim-1
+              - name: gpu-claim-2
+              - name: gpu-claim-3
+              - name: gpu-claim-4
+              - name: gpu-claim-5
+              - name: gpu-claim-6
+              - name: gpu-claim-7
+          volumeMounts:
+            - mountPath: /usr/local/nvidia
+              name: nvidia-driver
+            - mountPath: /usr/local/gib
+              name: gib-driver
+      volumes:
+        - name: nvidia-driver
+          hostPath:
+            path: /home/kubernetes/bin/nvidia
+        - name: gib-driver
+          hostPath:
+            path: /home/kubernetes/bin/gib

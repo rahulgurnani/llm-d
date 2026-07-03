@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pd-disaggregation-nvidia-gpu-sglang-prefill
+spec:
+  template:
+    spec:
+      containers:
+      - name: modelserver
+        volumeMounts:
+        - name: nixl-conn-patch
+          mountPath: /sgl-workspace/sglang/python/sglang/srt/disaggregation/nixl/conn.py
+          subPath: conn.py
+      volumes:
+      - name: nixl-conn-patch
+        configMap:
+          name: sglang-nixl-conn-patch

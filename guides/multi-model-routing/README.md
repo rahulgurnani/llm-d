@@ -65,7 +65,6 @@ git clone https://github.com/llm-d/llm-d-inference-payload-processor.git /tmp/ip
 helm install ipp /tmp/ipp/config/charts/payload-processor \
     --set provider.name=istio \
     --set inferenceGateway.name=llm-d-inference-gateway \
-    --set payloadProcessor.image.tag=v0.1.0-rc.4 \
     -n ${NAMESPACE}
 ```
 

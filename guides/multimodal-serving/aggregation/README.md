@@ -1,6 +1,6 @@
 # Multimodal Optimized Baseline Guide
 
-This guide deploys the recommended [configuration](https://github.com/llm-d/llm-d-router/blob/main/docs/architecture.md) for multimodal vLLM deployments, reducing tail latency and increasing throughput through load-aware and prefix-cache aware balancing.
+This guide deploys the recommended [configuration](https://github.com/llm-d/llm-d-router/blob/main/docs/architecture.md) for multimodal vLLM/SGLang deployments, reducing tail latency and increasing throughput through load-aware and prefix-cache aware balancing.
 
 The multimodal-optimized-baseline routes with the same token-based stack as the [optimized-baseline](../../optimized-baseline) reference:
 
@@ -26,6 +26,7 @@ This guide includes configurations for the following accelerators and inference 
 | Backend            | Directory                  | Model                        | Notes                                      |
 | ------------------ | -------------------------- | ---------------------------- | ------------------------------------------ |
 | NVIDIA GPU         | `modelserver/gpu/vllm/${INFRA_PROVIDER}/`    | `Qwen/Qwen3-VL-32B-Instruct` | Default configuration (`INFRA_PROVIDER` options: `base`, `gke`)                      |
+| NVIDIA GPU         | `modelserver/gpu/sglang/${INFRA_PROVIDER}/`  | `Qwen/Qwen3-VL-32B-Instruct` | SGLang backend (`INFRA_PROVIDER` options: `base`, `gke`)                              |
 | Intel XPU          | `modelserver/xpu/vllm/`    | `Qwen/Qwen3-VL-32B-Instruct` | Intel Arc Pro B60            |
 | Google TPU v7      | `modelserver/tpu/v7/vllm/qwen3-vl/` | `Qwen/Qwen3-VL-32B-Instruct` | GKE `tpu7x`, `2x2x1` slice, TP=4, 4 chips per replica, 8 replicas |
 | Google TPU v7      | `modelserver/tpu/v7/vllm/gemma4/`   | `google/gemma-4-31B-it`      | Same hardware; <br/>needs the Gemma 4 token estimate in the [router values](#1-deploy-the-llm-d-router) |
@@ -131,11 +132,12 @@ helm install ${GUIDE_NAME} \
 
 ### 2. Deploy the Model Server
 
-Apply the Kustomize overlays for your specific backend (defaulting to NVIDIA GPU / vLLM):
+Apply the Kustomize overlays for your specific backend (defaulting to NVIDIA GPU / vLLM or SGLang):
 
 ```bash
-export INFRA_PROVIDER=gke # base | gke
-kubectl apply -n ${NAMESPACE} -k ${REPO_ROOT}/guides/multimodal-serving/${GUIDE_NAME}/modelserver/gpu/vllm/${INFRA_PROVIDER}/
+export MODEL_SERVER=vllm # options: vllm, sglang
+export INFRA_PROVIDER=gke # options: base, gke
+kubectl apply -n ${NAMESPACE} -k ${REPO_ROOT}/guides/multimodal-serving/${GUIDE_NAME}/modelserver/gpu/${MODEL_SERVER}/${INFRA_PROVIDER}/
 ```
 
 <details>
@@ -247,7 +249,7 @@ To tear down and clean up all deployed resources:
 
 ```bash
 helm uninstall ${GUIDE_NAME} -n ${NAMESPACE}
-kubectl delete -n ${NAMESPACE} -k ${REPO_ROOT}/guides/multimodal-serving/${GUIDE_NAME}/modelserver/gpu/vllm/${INFRA_PROVIDER}/
+kubectl delete -n ${NAMESPACE} -k ${REPO_ROOT}/guides/multimodal-serving/${GUIDE_NAME}/modelserver/gpu/${MODEL_SERVER}/${INFRA_PROVIDER}/
 # For Intel XPU:
 # kubectl delete -n ${NAMESPACE} -k ${REPO_ROOT}/guides/multimodal-serving/${GUIDE_NAME}/modelserver/xpu/vllm/
 # For Google TPU v7:
@@ -294,6 +296,8 @@ llm-d holds **sub-second TTFT p90 across the entire ladder** (0.15–0.40 s) whi
 
 Output tokens/sec — higher is better; TTFT in seconds — lower is better.
 
+#### vLLM
+
 | Rate | k8s Output | llm-d Output | k8s TTFT p50 | llm-d TTFT p50 | k8s TTFT p90 | llm-d TTFT p90 |
 |-----:|-----------:| -----------: | -----------: | -------------: | -----------: | -------------: |
 |    5 |   1,408    |    1,421     |    0.401     |     0.133      |    0.487     |     0.148      |
@@ -304,5 +308,18 @@ Output tokens/sec — higher is better; TTFT in seconds — lower is better.
 |   30 |   7,307    |    8,444     |    1.777     |     0.083      |    7.792     |     0.225      |
 |   35 |   7,272    |    9,782     |   11.060     |     0.153      |   21.192     |     0.350      |
 |   40 |   7,712    |   11,128     |   19.245     |     0.155      |   39.813     |     0.399      |
+
+#### SGLang
+
+
+| Rate | k8s Output | llm-d Output | k8s TTFT p50 | llm-d TTFT p50 | k8s TTFT p90 | llm-d TTFT p90 |
+|-----:|-----------:| -----------: | -----------: | -------------: | -----------: | -------------: |
+|    5 |      1,450 |        1,452 |        0.103 |          0.102 |        0.127 |          0.115 |
+|   10 |      2,819 |        2,824 |        0.103 |          0.093 |        0.141 |          0.110 |
+|   20 |      5,605 |        5,625 |        0.105 |          0.085 |        0.167 |          0.131 |
+|   30 |      8,375 |        8,423 |        0.115 |          0.089 |        0.217 |          0.151 |
+|   40 |     11,115 |       11,186 |        0.173 |          0.134 |        0.660 |          0.231 |
+|   50 |     13,541 |       13,955 |        0.296 |          0.198 |        1.289 |          0.443 |
+|   60 |     13,823 |       15,960 |        0.481 |          0.372 |        2.786 |          1.472 |
 
 </details>
